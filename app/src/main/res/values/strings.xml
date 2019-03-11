@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">VychMath</string>
+
+    <string-array name="args">
+        <item>x=</item>
+        <item>y=</item>
+    </string-array>
+
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>

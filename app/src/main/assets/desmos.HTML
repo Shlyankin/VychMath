@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://www.desmos.com/api/v1.2/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+        <style>
+            html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            }
+
+            #calculator {
+            width: 100%;
+            height: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="calculator"></div>
+        <script >
+            var elt = document.getElementById('calculator');
+            var options = { border: false };
+            var calculator = Desmos.GraphingCalculator(elt, options);
+            function plot(id, latex) {
+              calculator.setExpression({id:id, latex:latex});
+            }
+
+        </script>
+    </body>
+</html>

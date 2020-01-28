@@ -9,7 +9,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ProgressBar
 
-class AlternativeGraphActivity : AppCompatActivity() {
+class AlternativeGraphActivity : AppCompatActivity(), View.OnClickListener {
+
 
     private lateinit var webView : WebView
     private lateinit var progressBar : ProgressBar
@@ -31,6 +32,13 @@ class AlternativeGraphActivity : AppCompatActivity() {
                     val latex = intent.getStringExtra("function" + i)
                     webView.loadUrl("javascript:plot(\"function$i\", \"$latex\");")
                 }
+            }
+        }
+    }
+    override fun onClick(view: View?) {
+        when(view!!.id) {
+            R.id.backBtn -> {
+                onBackPressed()
             }
         }
     }

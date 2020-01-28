@@ -114,7 +114,8 @@
                                 android:ems="10"
                                 android:hint="Ваша функция"
                                 android:inputType="textPersonName"
-                                android:textAlignment="center" />
+                                android:textAlignment="center"
+                                android:typeface="monospace" />
 
                         </LinearLayout>
 
@@ -131,7 +132,8 @@
                                 android:ems="10"
                                 android:hint="Производная вашей функции"
                                 android:inputType="textPersonName"
-                                android:textAlignment="center" />
+                                android:textAlignment="center"
+                                android:typeface="monospace" />
 
                         </LinearLayout>
 

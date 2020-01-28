@@ -17,6 +17,7 @@ import kotlinx.android.synthetic.main.activity_calculating_root.*
 import net.objecthunter.exp4j.Expression
 import net.objecthunter.exp4j.ExpressionBuilder
 import net.objecthunter.exp4j.tokenizer.UnknownFunctionOrVariableException
+import java.lang.ArithmeticException
 import java.lang.IllegalArgumentException
 import java.lang.NumberFormatException
 import kotlin.math.absoluteValue
@@ -119,6 +120,103 @@ class CalculatingRootActivity : AppCompatActivity(), View.OnClickListener {
         super.onPause()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+    }
+
+    override fun onClick(view: View?) {
+        when(view!!.id) {
+            R.id.calculateBtn -> {
+                try {
+                    val expression = ExpressionBuilder(funcET.text.toString())
+                            .variable("x")
+                            .build()
+                    val leftInterval = leftIntervalET.text.toString().toDouble()
+                    val rightInterval = rightIntervalET.text.toString().toDouble()
+                    if(leftInterval > rightInterval) {
+                        messageTV.text = "Неправильно заданы границы"
+                        answerTV.text = "Корень: "
+                        iterationsTV.text = "Количество итераций: "
+                        nevyazkaTV.text = "Невязка: "
+                        return
+                    }
+                    val eps = epsET.text.toString().toDouble()
+                    val f : (x: Double) -> Double = {x: Double -> expression.setVariable("x", x).evaluate() }
+                    val result : Double? = when(methodsType) {
+                        "hybrid" -> {
+                            val startingX = startingXET.text.toString().toDouble()
+                            val der_f : ((x : Double) -> Double)? =
+                                if(!autoDerivativeCheckBox.isChecked) {
+                                    {x: Double ->
+                                        ExpressionBuilder(derivativeET.text.toString())
+                                                .variable("x")
+                                                .build()
+                                                .setVariable("x", x)
+                                                .evaluate() }
+                                } else null
+                            hybridMethod(startingX, eps, f, der_f)
+                        }
+                        "dichotomy" -> {
+                            dichotomy(eps, leftInterval, rightInterval, f)
+                        }
+                        else -> null
+                    }
+                    if (result != null) {
+                        if(result.isFinite() && result.isFinite()) {
+                            if (result < leftInterval || result > rightInterval)
+                                messageTV.text = "Метод сошелся к корню вне интервала"
+                            else
+                                messageTV.text = "OK"
+                            val nevyzkaValue = expression.setVariable("x", result).evaluate().absoluteValue
+                            nevyazkaTV.text = "Невязка: " + nevyzkaValue.toString()
+                            if (nevyzkaValue > 0.1) {
+                                messageTV.text = "Метод не сошелся. Попробуйте другое начальное приближение"
+                                answerTV.text = "Корень: "
+                            } else answerTV.text = "Корень: " + result.toString()
+                            iterationsTV.text = "Количество итераций: " + iterations.toString()
+                        } else {
+                            messageTV.text = "Ответ не удалось найти.\nПопробуйте изменить границы."
+                            answerTV.text = "Корень: неизвестно"
+                            iterationsTV.text = "Количество итераций: $iterations"
+                            nevyazkaTV.text = "Невязка: неизвестно"
+                        }
+                    } else {
+                        messageTV.text = "Метод не сошелся за 100 итераций!"
+                        answerTV.text = "Корень: неизвестно"
+                        iterationsTV.text = "Количество итераций: >100"
+                        nevyazkaTV.text = "Невязка: неизвестно"
+                    }
+                } catch (e : ArithmeticException) {
+                    messageTV.text = "Функция имеет разрыв в данном интервале.\nИзмените интервал."
+                    answerTV.text = "Корень: неизвестно"
+                    iterationsTV.text = "Количество итераций: неизвестно"
+                    nevyazkaTV.text = "Невязка: неизвестно"
+                } catch (e : NumberFormatException) {
+                    messageTV.text = "Вы не заполнили все поля!"
+                    answerTV.text = "Корень: неизвестно"
+                    iterationsTV.text = "Количество итераций: неизвестно"
+                    nevyazkaTV.text = "Невязка: неизвестно"
+                } catch (e : UnknownFunctionOrVariableException) {
+                    messageTV.text = "Неправильно задана функция!"
+                    answerTV.text = "Корень: неизвестно"
+                    iterationsTV.text = "Количество итераций: неизвестно"
+                    nevyazkaTV.text = "Невязка: неизвестно"
+                } catch (e : IllegalArgumentException) {
+                    messageTV.text = "Неправильно задана функция!"
+                    answerTV.text = "Корень: неизвестно"
+                    iterationsTV.text = "Количество итераций: неизвестно"
+                    nevyazkaTV.text = "Невязка: неизвестно"
+                }
+            }
+            R.id.plotBtn -> {
+                startActivity(Intent(this@CalculatingRootActivity, AlternativeGraphActivity::class.java).apply {
+                    this.putExtra("numberOfPlot", 1)
+                    this.putExtra("function1", parseForLatex("y = " + funcET.text.toString()))
+                })
+            }
+        }
+    }
+
     private fun hybridMethod(startingX : Double, eps : Double,
                              f : (x: Double) -> Double, der_f : ((x: Double) -> Double)? = null) : Double? {
         iterations = 0
@@ -131,15 +229,10 @@ class CalculatingRootActivity : AppCompatActivity(), View.OnClickListener {
             val f_prevX = f(prevX)
             nextX = prevX - (f_prevX)/derivative(prevX)
             while(f(nextX).absoluteValue > f(prevX).absoluteValue) {
-                prevX = nextX
                 nextX = 0.5 *(nextX + prevX)
             }
         } while ((nextX - prevX).absoluteValue > eps)
         return nextX
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
     }
 
     private fun dichotomy(eps : Double, leftInterval : Double, rightInterval : Double, f : (x : Double) -> Double) : Double? {
@@ -166,81 +259,5 @@ class CalculatingRootActivity : AppCompatActivity(), View.OnClickListener {
             }
         }
         return x
-    }
-
-    override fun onClick(view: View?) {
-        when(view!!.id) {
-            R.id.calculateBtn -> {
-                try {
-                    val expression = ExpressionBuilder(funcET.text.toString())
-                            .variable("x")
-                            .build()
-                    val leftInterval = leftIntervalET.text.toString().toDouble()
-                    val rightInterval = rightIntervalET.text.toString().toDouble()
-
-                    val eps = epsET.text.toString().toDouble()
-                    val f : (x: Double) -> Double = {x: Double -> expression.setVariable("x", x).evaluate() }
-                    val result : Double? = when(methodsType) {
-                        "hybrid" -> {
-                            val startingX = startingXET.text.toString().toDouble()
-                            val der_f : ((x : Double) -> Double)? =
-                                if(!autoDerivativeCheckBox.isChecked) {
-                                    val der_expression = ExpressionBuilder(derivativeET.text.toString())
-                                            .variable("x")
-                                            .build();
-                                    {x: Double -> der_expression
-                                        .setVariable("x", x)
-                                        .evaluate() }
-                                } else null
-                            hybridMethod(startingX, eps, f, der_f)
-                        }
-                        "dichotomy" -> {
-                            dichotomy(eps, leftInterval, rightInterval, f)
-                        }
-                        else -> null
-                    }
-                    if (result != null) {
-                        if(result < leftInterval || result > rightInterval)
-                            messageTV.text = "Метод сошелся к корню вне интервала"
-                        else
-                            messageTV.text = "OK"
-                        val nevyzkaValue = expression.setVariable("x", result).evaluate().absoluteValue
-                        nevyazkaTV.text = "Невязка: " + nevyzkaValue.toString()
-                        if(nevyzkaValue > 0.1) {
-                            messageTV.text = "Метод не сошелся. Попробуйте другое начальное приближение"
-                            answerTV.text = "Корень: "
-                        }
-                        else answerTV.text = "Корень: " + result.toString()
-                        iterationsTV.text = "Количество итераций: " + iterations.toString()
-                    } else {
-                        messageTV.text = "Метод не сошелся за 100 итераций!"
-                        answerTV.text = "Корень: неизвестно"
-                        iterationsTV.text = "Количество итераций: >100"
-                        nevyazkaTV.text = "Невязка: неизвестно"
-                    }
-                } catch (e : NumberFormatException) {
-                    messageTV.text = "Вы не заполнили все поля!"
-                    answerTV.text = "Корень: неизвестно"
-                    iterationsTV.text = "Количество итераций: неизвестно"
-                    nevyazkaTV.text = "Невязка: неизвестно"
-                } catch (e : UnknownFunctionOrVariableException) {
-                    messageTV.text = "Неправильно задана функция!"
-                    answerTV.text = "Корень: неизвестно"
-                    iterationsTV.text = "Количество итераций: неизвестно"
-                    nevyazkaTV.text = "Невязка: неизвестно"
-                } catch (e : IllegalArgumentException) {
-                    messageTV.text = "Неправильно задана функция!"
-                    answerTV.text = "Корень: неизвестно"
-                    iterationsTV.text = "Количество итераций: неизвестно"
-                    nevyazkaTV.text = "Невязка: неизвестно"
-                }
-            }
-            R.id.plotBtn -> {
-                startActivity(Intent(this@CalculatingRootActivity, AlternativeGraphActivity::class.java).apply {
-                    this.putExtra("numberOfPlot", 1)
-                    this.putExtra("function1", parseForLatex("y = " + funcET.text.toString()))
-                })
-            }
-        }
     }
 }

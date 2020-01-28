@@ -19,17 +19,17 @@
             </intent-filter>
         </activity>
         <activity android:name=".CalculatingRootActivity" />
-        <activity
-            android:name=".GraphActivity"
-            android:screenOrientation="landscape"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
         <activity android:name=".TwoDimensialCalculatingRootActivity" />
-        <activity android:name=".AlternativeGraphActivity"
+        <activity
+            android:name=".AlternativeGraphActivity"
             android:configChanges="orientation|screenSize"
             android:screenOrientation="landscape"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
-
-        </activity>
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
+        <activity android:name=".InterpolationActivity" />
+        <activity android:name=".CalculatingInterpolationActivity"
+            android:configChanges="orientation|screenSize"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"></activity>
     </application>
 
 </manifest>

@@ -1,5 +1,6 @@
 package com.heads.thinking.vychmath
 
+import android.arch.lifecycle.ViewModelProviders
 import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
@@ -10,11 +11,15 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import com.heads.thinking.vychmath.custom.math.Matrix
+import com.heads.thinking.vychmath.mvvm.CalculatingRootViewModel
+import com.heads.thinking.vychmath.mvvm.TwoDimensialCalculatingRootViewModel
 import net.objecthunter.exp4j.ExpressionBuilder
 import net.objecthunter.exp4j.tokenizer.UnknownFunctionOrVariableException
+import java.lang.ArithmeticException
 import java.lang.Error
 import java.lang.Exception
 import java.lang.IllegalArgumentException
+import java.lang.IllegalStateException
 import java.lang.NumberFormatException
 import kotlin.math.sin
 import kotlin.math.cos
@@ -23,14 +28,16 @@ import kotlin.math.absoluteValue
 
 fun parseForLatex(formula : String) : String {
     var latex = ""
-    for(i in 0..(formula.length-1)) {
-        when(formula[i]) {
-            's' -> if (formula.substring(i, i + 2) == "sin") latex += "\\\\"
-            'c'-> if (formula.substring(i, i + 2) == "sin") latex += "\\\\"
-            't'-> if (formula.substring(i, i + 2) == "sin") latex += "\\\\"
-            'e' -> latex += "\\\\"
-            'p' -> if (formula.substring(i, i+1) == "pi") latex += "\\\\"
-        }
+    for (i in 0..(formula.length - 1)) {
+        try {
+            when (formula[i]) {
+                's' -> if (formula.substring(i, i + 3) == "sin") latex += "\\\\"
+                'c' -> if (formula.substring(i, i + 3) == "cos") latex += "\\\\"
+                't' -> if (formula.substring(i, i + 3) == "tan") latex += "\\\\"
+                'e' -> latex += "\\\\"
+                'p' -> if (formula.substring(i, i + 2) == "pi") latex += "\\\\"
+            }
+        } catch (e: IllegalStateException) { /*do nothinп*/ }
         latex += formula[i]
     }
     return latex
@@ -57,6 +64,8 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
     private lateinit var autoDerivativeCheckBox: CheckBox
 
     private var methodsType = ""
+
+    private lateinit var viewModel : TwoDimensialCalculatingRootViewModel
 
     fun derivative_f(f : ((v : Matrix) -> Matrix), v : Matrix) : Matrix {
         val x = v[0][0]
@@ -111,6 +120,50 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
         autoDerivativeCheckBox = findViewById(R.id.autoDerivativeCheckBox)
 
         methodsType = intent.getStringExtra("method")
+        viewModel = ViewModelProviders.of(this).get(TwoDimensialCalculatingRootViewModel::class.java)
+    }
+
+    override fun onResume() {
+        if(viewModel.methodsType != "") {
+            f1xET.setText(viewModel.f1x)
+            f1yET.setText(viewModel.f1y)
+            f2xET.setText(viewModel.f2x)
+            f2yET.setText(viewModel.f2y)
+            epsET.setText(viewModel.eps)
+            f1ET.setText(viewModel.f1)
+            f2ET.setText(viewModel.f2)
+            leftIntervalXET.setText(viewModel.leftIntervalX)
+            rightIntervalXET.setText(viewModel.rightIntervalX)
+            leftIntervalYET.setText(viewModel.leftIntervalY)
+            rightIntervalYET.setText(viewModel.rightIntervalY)
+            answerTV.text = viewModel.answer
+            nevyazkaTV.text = viewModel.nevyazka
+            iterationsTV.text = viewModel.iterations
+            messageTV.text = viewModel.message
+            methodsType = viewModel.methodsType
+        }
+        super.onResume()
+    }
+
+    override fun onPause() {
+        viewModel.f1x = f1xET.text.toString()
+        viewModel.f1y = f1yET.text.toString()
+        viewModel.f2x = f2xET.text.toString()
+        viewModel.f2y = f2yET.text.toString()
+        viewModel.eps = epsET.text.toString()
+        viewModel.f1 = f1ET.text.toString()
+        viewModel.f2 = f2ET.text.toString()
+        viewModel.leftIntervalX  = leftIntervalXET.text.toString()
+        viewModel.rightIntervalX = rightIntervalXET.text.toString()
+        viewModel.leftIntervalY  = leftIntervalYET.text.toString()
+        viewModel.rightIntervalY = rightIntervalYET.text.toString()
+        viewModel.answer = answerTV.text.toString()
+        viewModel.nevyazka = nevyazkaTV.text.toString()
+        viewModel.iterations = iterationsTV.text.toString()
+        viewModel.message = messageTV.text.toString()
+        viewModel.methodsType = methodsType
+
+        super.onPause()
     }
 
     override fun onClick(view: View?) {
@@ -121,6 +174,13 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
                     val rightX = rightIntervalXET.text.toString().toDouble()
                     val leftY = leftIntervalYET.text.toString().toDouble()
                     val rightY = rightIntervalYET.text.toString().toDouble()
+                    if(leftX > rightX || leftY > rightY) {
+                        messageTV.text = "Неправильно заданы границы"
+                        answerTV.text = "Корень: "
+                        iterationsTV.text = "Количество итераций: "
+                        nevyazkaTV.text = "Невязка: "
+                        return
+                    }
                     val eps = epsET.text.toString().toDouble()
 
                     val f1 = ExpressionBuilder(f1ET.text.toString()).variables("x", "y").build()
@@ -140,8 +200,8 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
                     }
                     val der_f : ((v : Matrix) -> Matrix)? =
                             if(!autoDerivativeCheckBox.isChecked) {
-                                val f1y = ExpressionBuilder(f1yET.text.toString()).variables("x", "y").build();
                                 val f1x = ExpressionBuilder(f1xET.text.toString()).variables("x", "y").build();
+                                val f1y = ExpressionBuilder(f1yET.text.toString()).variables("x", "y").build();
                                 val f2x = ExpressionBuilder(f2xET.text.toString()).variables("x", "y").build();
                                 val f2y = ExpressionBuilder(f2yET.text.toString()).variables("x", "y").build();
                                 { v: Matrix ->
@@ -170,12 +230,26 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
                         }
                         else -> null
                     }
-                    if (result != null) {
-                        val fResult = f(result)
-                        messageTV.text = ""
-                        answerTV.text = "x = ${result[0][0]}\ny = ${result[1][0]}"
-                        iterationsTV.text = "Количество итераций: $iterations"
-                        nevyazkaTV.text = "Невязка: ${fResult.norma()}"
+                    if (result != null ) {
+                        if(result[0][0].isFinite() && result[1][0].isFinite()) {
+                            messageTV.text = ""
+                            if (result[0][0] < leftX || result[0][0] > rightX || result[1][0] < leftY || result[1][0] > rightY)
+                                messageTV.text = "Метод сошелся к корню вне интервала"
+                            else
+                                messageTV.text = "OK"
+                            val nevyzkaValue = f(result).norma()
+                            nevyazkaTV.text = "Невязка: $nevyzkaValue"
+                            if (nevyzkaValue > 0.1) {
+                                messageTV.text = "Метод не сошелся. Попробуйте другое начальное приближение"
+                                answerTV.text = "Корень: "
+                            } else answerTV.text = "x = ${result[0][0]}\ny = ${result[1][0]}"
+                            iterationsTV.text = "Количество итераций: $iterations"
+                        } else {
+                            messageTV.text = "Ответ не удалось найти.\nПопробуйте изменить границы."
+                            answerTV.text = "Корень: неизвестно"
+                            iterationsTV.text = "Количество итераций: $iterations"
+                            nevyazkaTV.text = "Невязка: неизвестно"
+                        }
                     }
                     else {
                         messageTV.text = "Метод не сошелся за 100 итераций!"
@@ -183,6 +257,11 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
                         iterationsTV.text = "Количество итераций: >100"
                         nevyazkaTV.text = "Невязка: неизвестно"
                     }
+                } catch (e : ArithmeticException) {
+                    messageTV.text = "Функция имеет разрыв в данном интервале.\nИзмените интервал."
+                    answerTV.text = "Корень: неизвестно"
+                    iterationsTV.text = "Количество итераций: неизвестно"
+                    nevyazkaTV.text = "Невязка: неизвестно"
                 } catch (e : NumberFormatException) {
                     messageTV.text = "Вы не заполнили все поля!"
                     answerTV.text = "Корень: неизвестно"
@@ -203,8 +282,8 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
             R.id.plotBtn -> {
                 val function1 = f1ET.text.toString()
                 val function2 = f2ET.text.toString()
-                startActivity(Intent(this@TwoDimensialCalculatingRootActivity, GraphActivity::class.java).apply {
-                    this.putExtra("plotType", "2") //
+                startActivity(Intent(this@TwoDimensialCalculatingRootActivity, AlternativeGraphActivity::class.java).apply {
+                    this.putExtra("numberOfPlot", 2)
                     this.putExtra("function1", parseForLatex(function1 + "=0"))
                     this.putExtra("function2", parseForLatex(function2 + "=0"))
                 })
@@ -237,16 +316,15 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
         val startingX = Matrix(2, 1, init = { i: Int, j: Int ->
             if (i == 0) (intervalX.second + intervalX.first) / 2
             else (intervalY.second + intervalY.first) / 2
-        }) // initialize
+        })
         var prevX = startingX
         var nextX : Matrix = startingX
         do {
             if(iterations == 100) return null
             iterations++
             prevX = nextX
-            val delta =  derivative_f(prevX).inverseMatrix2x2() * f(prevX)
-            nextX = prevX - delta
-        } while ((nextX.norma() - prevX.norma()).absoluteValue > 2*eps)
+            nextX = prevX - derivative_f(prevX).inverseMatrix2x2() * f(prevX)
+        } while ((nextX.norma() - prevX.norma()).absoluteValue > eps)
         return nextX
     }
 
@@ -257,7 +335,7 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
         val startingX = Matrix(2, 1, init = { i: Int, j: Int ->
             if (i == 0) ((intervalX.second + intervalX.first) / 2)
             else (intervalY.second + intervalY.first) / 2
-        }) // initialize
+        })
         var prevX = startingX
         var nextX : Matrix = startingX
         val invDerivative = derivative_f(startingX).inverseMatrix2x2()
@@ -265,8 +343,7 @@ class TwoDimensialCalculatingRootActivity : AppCompatActivity(), View.OnClickLis
             if(iterations == 100) return null
             iterations++
             prevX = nextX
-            val delta =  invDerivative * f(prevX)
-            nextX = prevX - delta
+            nextX = prevX - invDerivative * f(prevX)
         } while ((nextX.norma() - prevX.norma()).absoluteValue > eps)
         return nextX
     }
